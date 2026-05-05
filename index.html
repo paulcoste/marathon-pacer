@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pacer" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <title>Pacer</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@300;400;600;700;900&display=swap');
+
+    :root {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --border: #222;
+      --accent: #c8f135;
+      --accent-dim: #8aaa22;
+      --text: #f0f0f0;
+      --muted: #444;
+      --muted-text: #555;
+      --red: #ff4444;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Barlow Condensed', sans-serif;
+      overflow: hidden;
+      touch-action: manipulation;
+    }
+
+    .app {
+      display: flex;
+      flex-direction: column;
+      height: 100dvh;
+      padding: env(safe-area-inset-top, 12px) 16px env(safe-area-inset-bottom, 12px);
+      gap: 10px;
+    }
+
+    /* HEADER */
+    .header {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      padding-top: 4px;
+    }
+    .header h1 {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+    .header span {
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--muted-text);
+      font-weight: 400;
+    }
+
+    /* INPUTS ROW */
+    .inputs-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .field {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s;
+      position: relative;
+    }
+    .field.active {
+      border-color: var(--accent);
+    }
+    .field-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted-text);
+      margin-bottom: 4px;
+    }
+    .field-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text);
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 0;
+      letter-spacing: -0.02em;
+    }
+    .field-value.empty {
+      color: var(--muted);
+    }
+    .field-unit {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--muted-text);
+      margin-top: 2px;
+    }
+    .cursor {
+      display: inline-block;
+      width: 2px;
+      height: 28px;
+      background: var(--accent);
+      margin-left: 2px;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* OBJECTIFS */
+    .objectives-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--muted-text);
+      padding-left: 2px;
+    }
+
+    .objectives {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    .obj-btn {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 4px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.15s;
+      user-select: none;
+    }
+    .obj-btn .obj-time {
+      font-family: 'DM Mono', monospace;
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--muted-text);
+      letter-spacing: -0.02em;
+      transition: color 0.15s;
+    }
+    .obj-btn .obj-sub {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+    .obj-btn.selected {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .obj-btn.selected .obj-time {
+      color: #0a0a0a;
+    }
+    .obj-btn.selected .obj-sub {
+      color: #0a0a0a99;
+    }
+    .obj-btn.dimmed {
+      opacity: 0.35;
+    }
+
+    /* RESULT */
+    .result {
+      flex: 1;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+
+    .result::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 110%, #c8f13508 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .result-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--muted-text);
+      margin-bottom: 6px;
+    }
+
+    .result-value {
+      font-family: 'DM Mono', monospace;
+      font-size: clamp(52px, 16vw, 80px);
+      font-weight: 400;
+      color: var(--accent);
+      line-height: 1;
+      letter-spacing: -0.03em;
+      transition: opacity 0.2s;
+    }
+
+    .result-unit {
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--accent-dim);
+      margin-top: 6px;
+    }
+
+    .result-meta {
+      font-size: 11px;
+      color: var(--muted-text);
+      margin-top: 10px;
+      font-family: 'DM Mono', monospace;
+      letter-spacing: 0.05em;
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .result-placeholder {
+      font-size: 15px;
+      font-weight: 400;
+      letter-spacing: 0.12em;
+      color: var(--muted);
+      text-align: center;
+      padding: 0 24px;
+      line-height: 1.6;
+    }
+
+    .result-error {
+      color: var(--red);
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-align: center;
+      padding: 0 20px;
+    }
+
+    /* KEYPAD */
+    .keypad-wrapper {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px;
+    }
+
+    .keypad-hint {
+      font-size: 10px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted-text);
+      text-align: center;
+      margin-bottom: 8px;
+    }
+
+    .keypad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 7px;
+    }
+
+    .key {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      height: 46px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'DM Mono', monospace;
+      font-size: 22px;
+      font-weight: 500;
+      color: var(--text);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.08s, transform 0.08s;
+      -webkit-user-select: none;
+    }
+    .key:active {
+      background: #1e1e1e;
+      transform: scale(0.94);
+    }
+    .key.sep {
+      color: var(--accent);
+      font-size: 20px;
+    }
+    .key.del {
+      color: var(--muted-text);
+      font-size: 18px;
+    }
+    .key.del:active {
+      color: var(--red);
+    }
+    .key.empty-key {
+      background: transparent;
+      border-color: transparent;
+      cursor: default;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- HEADER -->
+  <div class="header">
+    <h1>Pacer</h1>
+    <span>Marathon</span>
+  </div>
+
+  <!-- INPUTS -->
+  <div class="inputs-row">
+    <div class="field" id="field-km" onclick="activateField('km')">
+      <div class="field-label">Distance</div>
+      <div class="field-value empty" id="display-km">—<span class="cursor" id="cursor-km" style="display:none"></span></div>
+      <div class="field-unit">km</div>
+    </div>
+    <div class="field" id="field-time" onclick="activateField('time')">
+      <div class="field-label">Temps</div>
+      <div class="field-value empty" id="display-time">—<span class="cursor" id="cursor-time" style="display:none"></span></div>
+      <div class="field-unit">h . min . sec</div>
+    </div>
+  </div>
+
+  <!-- OBJECTIFS -->
+  <div class="objectives-label">Objectif</div>
+  <div class="objectives" id="objectives"></div>
+
+  <!-- RÉSULTAT -->
+  <div class="result" id="result-box">
+    <div class="result-placeholder" id="result-placeholder">Saisis la distance<br>et ton temps</div>
+    <div id="result-content" style="display:none; text-align:center;">
+      <div class="result-label">Allure cible</div>
+      <div class="result-value" id="result-value">—</div>
+      <div class="result-unit">/km</div>
+      <div class="result-meta" id="result-meta"></div>
+    </div>
+    <div class="result-error" id="result-error" style="display:none;"></div>
+  </div>
+
+  <!-- KEYPAD -->
+  <div class="keypad-wrapper">
+    <div class="keypad-hint" id="keypad-hint">Sélectionne un champ</div>
+    <div class="keypad" id="keypad"></div>
+  </div>
+
+</div>
+
+<script>
+  // ─── CONFIG ───────────────────────────────────────────────
+  const OBJECTIVES = [
+    { label: '3:15', seconds: 3*3600+15*60 },
+    { label: '3:16', seconds: 3*3600+16*60 },
+    { label: '3:18', seconds: 3*3600+18*60 },
+    { label: '3:20', seconds: 3*3600+20*60 },
+  ];
+  const TOTAL_KM = 42.195;
+
+  // ─── STATE ────────────────────────────────────────────────
+  let activeField = null; // 'km' | 'time'
+  let rawKm = '';         // ex: "253" → 25.3
+  let rawTime = '';       // ex: "11545" → 1h15m45s
+  let selectedObj = null; // index
+
+  // ─── OBJECTIFS ────────────────────────────────────────────
+  const objContainer = document.getElementById('objectives');
+  OBJECTIVES.forEach((obj, i) => {
+    const btn = document.createElement('div');
+    btn.className = 'obj-btn';
+    btn.innerHTML = `<div class="obj-time">${obj.label}</div><div class="obj-sub">objectif</div>`;
+    btn.addEventListener('click', () => selectObj(i));
+    objContainer.appendChild(btn);
+  });
+
+  function selectObj(i) {
+    selectedObj = i;
+    document.querySelectorAll('.obj-btn').forEach((btn, idx) => {
+      btn.classList.toggle('selected', idx === i);
+      btn.classList.toggle('dimmed', idx !== i);
+    });
+    compute();
+  }
+
+  // ─── KEYPAD ───────────────────────────────────────────────
+  const keypad = document.getElementById('keypad');
+  const keypadHint = document.getElementById('keypad-hint');
+
+  function buildKeypad(type) {
+    keypad.innerHTML = '';
+    const sepChar = type === 'km' ? ',' : '.';
+    const sepLabel = type === 'km' ? ',' : '.';
+    const hint = type === 'km' ? 'Distance parcourue (ex: 25,3)' : 'Temps (ex: 1.35.45 ou 1.35)';
+    keypadHint.textContent = hint;
+
+    const keys = ['1','2','3','4','5','6','7','8','9', sepChar,'0','⌫'];
+    keys.forEach(k => {
+      const btn = document.createElement('div');
+      btn.className = 'key' + (k === sepChar ? ' sep' : '') + (k === '⌫' ? ' del' : '');
+      btn.textContent = k === sepChar ? sepLabel : k;
+      btn.addEventListener('click', () => handleKey(k));
+      keypad.appendChild(btn);
+    });
+  }
+
+  function clearKeypad() {
+    keypad.innerHTML = '';
+    keypadHint.textContent = 'Sélectionne un champ';
+  }
+
+  // ─── FIELD ACTIVATION ────────────────────────────────────
+  function activateField(field) {
+    activeField = field;
+    document.getElementById('field-km').classList.toggle('active', field === 'km');
+    document.getElementById('field-time').classList.toggle('active', field === 'time');
+    document.getElementById('cursor-km').style.display = field === 'km' ? 'inline-block' : 'none';
+    document.getElementById('cursor-time').style.display = field === 'time' ? 'inline-block' : 'none';
+    buildKeypad(field);
+    render();
+  }
+
+  // ─── KEY HANDLER ─────────────────────────────────────────
+  function handleKey(k) {
+    if (!activeField) return;
+
+    if (k === '⌫') {
+      if (activeField === 'km') rawKm = rawKm.slice(0, -1);
+      else rawTime = rawTime.slice(0, -1);
+    } else {
+      // Separator: ',' for km, '.' for time
+      const sep = activeField === 'km' ? ',' : '.';
+      if (k === sep) {
+        if (activeField === 'km') {
+          if (rawKm.includes(',')) return; // une seule virgule
+          if (rawKm.length === 0) rawKm = '0';
+          rawKm += ',';
+        } else {
+          // max 2 points pour h.min.sec
+          const dots = (rawTime.match(/\./g) || []).length;
+          if (dots >= 2) return;
+          if (rawTime.length === 0) return;
+          rawTime += '.';
+        }
+      } else {
+        // digit
+        if (activeField === 'km') {
+          // max 2 décimales
+          const parts = rawKm.split(',');
+          if (parts.length === 2 && parts[1].length >= 2) return;
+          if (rawKm.length >= 5) return;
+          rawKm += k;
+        } else {
+          if (rawTime.length >= 8) return;
+          rawTime += k;
+        }
+      }
+    }
+    render();
+    compute();
+  }
+
+  // ─── RENDER DISPLAYS ─────────────────────────────────────
+  function render() {
+    // KM display
+    const dispKm = document.getElementById('display-km');
+    const cursorKm = document.getElementById('cursor-km');
+    if (rawKm === '') {
+      dispKm.className = 'field-value empty';
+      dispKm.textContent = '—';
+      dispKm.appendChild(cursorKm);
+    } else {
+      dispKm.className = 'field-value';
+      dispKm.textContent = rawKm;
+      dispKm.appendChild(cursorKm);
+    }
+
+    // Time display
+    const dispTime = document.getElementById('display-time');
+    const cursorTime = document.getElementById('cursor-time');
+    if (rawTime === '') {
+      dispTime.className = 'field-value empty';
+      dispTime.textContent = '—';
+      dispTime.appendChild(cursorTime);
+    } else {
+      dispTime.className = 'field-value';
+      dispTime.textContent = rawTime;
+      dispTime.appendChild(cursorTime);
+    }
+  }
+
+  // ─── PARSE ───────────────────────────────────────────────
+  function parseKm(raw) {
+    if (!raw || raw === ',') return null;
+    const val = parseFloat(raw.replace(',', '.'));
+    if (isNaN(val) || val <= 0 || val >= TOTAL_KM) return null;
+    return val;
+  }
+
+  function parseTime(raw) {
+    if (!raw) return null;
+    const parts = raw.split('.');
+    let h = 0, m = 0, s = 0;
+    if (parts.length === 1) {
+      // juste minutes? ou heures?
+      const v = parseInt(parts[0]);
+      if (isNaN(v)) return null;
+      // Si > 59 on considère comme heures
+      if (v > 59) h = v;
+      else m = v;
+    } else if (parts.length === 2) {
+      h = parseInt(parts[0]) || 0;
+      m = parseInt(parts[1]) || 0;
+    } else {
+      h = parseInt(parts[0]) || 0;
+      m = parseInt(parts[1]) || 0;
+      s = parseInt(parts[2]) || 0;
+    }
+    if (m >= 60 || s >= 60) return null;
+    const total = h * 3600 + m * 60 + s;
+    if (total <= 0) return null;
+    return total;
+  }
+
+  // ─── COMPUTE ─────────────────────────────────────────────
+  function compute() {
+    const placeholder = document.getElementById('result-placeholder');
+    const content = document.getElementById('result-content');
+    const error = document.getElementById('result-error');
+
+    function show(state) {
+      placeholder.style.display = state === 'placeholder' ? 'block' : 'none';
+      content.style.display    = state === 'result'      ? 'block' : 'none';
+      error.style.display      = state === 'error'       ? 'block' : 'none';
+    }
+
+    if (selectedObj === null) { show('placeholder'); document.getElementById('result-placeholder').textContent = 'Choisis un objectif'; return; }
+
+    const km = parseKm(rawKm);
+    const elapsed = parseTime(rawTime);
+
+    if (km === null || elapsed === null) {
+      show('placeholder');
+      document.getElementById('result-placeholder').textContent = 'Saisis la distance\net ton temps';
+      return;
+    }
+
+    const objSec = OBJECTIVES[selectedObj].seconds;
+    const remaining = objSec - elapsed;
+    const kmLeft = TOTAL_KM - km;
+
+    if (kmLeft <= 0) { show('error'); error.textContent = 'Distance déjà dépassée !'; return; }
+    if (remaining <= 0) { show('error'); error.textContent = 'Objectif dépassé 💥\nEssaie le suivant !'; return; }
+
+    const paceSecPerKm = remaining / kmLeft;
+
+    const paceMin = Math.floor(paceSecPerKm / 60);
+    const paceSec = paceSecPerKm % 60;
+    const paceSecInt = Math.floor(paceSec);
+    const paceDec = Math.round((paceSec - paceSecInt) * 10);
+
+    const paceStr = `${paceMin}:${String(paceSecInt).padStart(2,'0')},${paceDec}`;
+
+    document.getElementById('result-value').textContent = paceStr;
+
+    // meta
+    const remMin = Math.floor(remaining / 60);
+    const remSec = Math.floor(remaining % 60);
+    const timeStr = `${Math.floor(remaining/3600)}h${String(Math.floor((remaining%3600)/60)).padStart(2,'0')}m${String(Math.floor(remaining%60)).padStart(2,'0')}s`;
+
+    document.getElementById('result-meta').innerHTML =
+      `${kmLeft.toFixed(2)} km restants &nbsp;·&nbsp; ${timeStr} max`;
+
+    show('result');
+  }
+
+  // ─── INIT ────────────────────────────────────────────────
+  render();
+
+  // Register service worker
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+</script>
+</body>
+</html>
