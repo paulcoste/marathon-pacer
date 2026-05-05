@@ -1,22 +1,16 @@
 {
   "name": "Pacer Marathon",
   "short_name": "Pacer",
-  "description": "Calcule ton allure cible pendant le marathon",
-  "start_url": "/marathon-pacer/",
-  "scope": "/marathon-pacer/",
+  "start_url": "https://paulcoste.github.io/marathon-pacer/",
+  "scope": "https://paulcoste.github.io/marathon-pacer/",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#0a0a0a",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "https://paulcoste.github.io/marathon-pacer/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
-    },
-    {
-      "src": "icon-512.png",
-      "sizes": "512x512",
       "type": "image/png"
     }
   ]
